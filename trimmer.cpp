@@ -111,7 +111,6 @@ class FastqOutput {
     shared_ptr<ostream> out_stream;
 
     public:
-    string path;
 
     bool openFile(string path, bool compressed) {
         if (compressed) {
@@ -164,8 +163,12 @@ int mismatches(const string& templ, const string& test) {
 class Analysis {
 
     vector<PrimerPair>& primer_pairs;
+    // Quick lookup for read 1. Each element is a vector of PrimerPairs that contain
+    // the same primer for read 1. Allows to find possible matches in read 2 based on
+    // read 1 primer. More useful if there are many pairs that share same read 1
+    // primer.
+    vector<vector<PrimerPair*>> read1_primer_read2_primers;
 
-    bool use_levens;
     unsigned int primer_mismatches;
 
     public:
@@ -174,10 +177,16 @@ class Analysis {
     unsigned long n_total_read_pairs = 0;
 
 
-    Analysis(vector<PrimerPair>& primer_pairs, bool use_levens, unsigned int primer_mismatches) :
-        primer_pairs(primer_pairs), use_levens(use_levens),
-        primer_mismatches(primer_mismatches)
+    Analysis(vector<PrimerPair>& primer_pairs, unsigned int primer_mismatches) :
+        primer_pairs(primer_pairs), primer_mismatches(primer_mismatches)
     {
+        map<string, vector<PrimerPair*>> read1_primer_map;
+        for (auto& pp : primer_pairs) {
+            read1_primer_map[pp.primers[0]].push_back(&pp);
+        }
+        for (auto& kv : read1_primer_map) {
+            read1_primer_read2_primers.push_back(kv.second);
+        }
     }
 
     vector<AnalysisResult> analyseReads(std::array<Batch, 2>& bat) {
@@ -187,50 +196,48 @@ class Analysis {
         int odata = 0; // Output record
         for (int idata=0; idata < bat[0].num_in_batch; ++idata) {
             bool unknown = true;
-            int n_trim_r[2];
 
-            for (PrimerPair & pp : primer_pairs) {
-                int n_mismatches = 0;
+            for (auto& read1primer_primers : read1_primer_read2_primers) {
+                // One loop iteration for each list of PrimerPairs with same read 1 primer
                 if (primer_mismatches == 0) {
-                    // Check if the reads start with the primer sequences, and trim if they do
-                    if (bat[0].data[idata][1].rfind(pp.primers[0], 0) == 0&&
-                            bat[1].data[idata][1].rfind(pp.primers[1], 0) == 0) {
-                        n_trim_r[0] = pp.primers[0].length();
-                        n_trim_r[1] = pp.primers[1].length();
-                        n_mismatches = 0;
-                    }
-                    else {
-                        n_mismatches = 1;
-                    }
-                }
-                else if (use_levens) {
-                    for (int read=0; read<2 && n_mismatches <= primer_mismatches; ++read) {
-                        auto result = mismatch_and_alignment(primer_mismatches + 1,
-                                                    pp.primers[read], bat[read].data[idata][1]);
-                        n_mismatches += result.first;
-                        n_trim_r[read] = result.second;
+                    if (bat[0].data[idata][1].rfind(read1primer_primers[0]->primers[0], 0) == 0) {
+                        // The read 1 primer matches, test all read 2 primers
+                        for (PrimerPair* pp : read1primer_primers) {
+                            if (bat[1].data[idata][1].rfind(pp->primers[1], 0) == 0) {
+                                unknown = false;
+                                results[idata].found = true;
+                                results[idata].trim[0] = pp->primers[0].length();
+                                results[idata].trim[1] = pp->primers[1].length();
+                                pp->n_read_pairs++;
+                                break;
+                            }
+                        }
+                        break;
                     }
                 }
                 else {
-                    for (int read=0; read<2 && n_mismatches <= primer_mismatches; ++read) {
-                        if (bat[read].data[idata][1].length() < pp.primers[read].length()) {
-                            n_mismatches = primer_mismatches + 1; // Too short, dropped instantly
-                            break;
+                    auto result1 = mismatch_and_alignment(primer_mismatches + 1,
+                            read1primer_primers[0]->primers[0],
+                            bat[0].data[idata][1]);
+                    if (result1.first <= primer_mismatches) {
+                        for (PrimerPair* pp : read1primer_primers) {
+                            auto result2 = mismatch_and_alignment(primer_mismatches + 1,
+                                                        pp->primers[1], bat[1].data[idata][1]);
+                            if (result1.first + result2.first <= primer_mismatches) {
+                                unknown = false;
+                                results[idata].found = true;
+                                results[idata].trim[0] = result1.second;
+                                results[idata].trim[1] = result2.second;
+                                pp->n_read_pairs++;
+                                break;
+                            }
                         }
-                        n_mismatches += mismatches(pp.primers[read], bat[read].data[idata][1]);
-                        n_trim_r[0] = pp.primers[read].length();
+                        // There may be other matching read1 primers, so break only if found
+                        if (!unknown) break;
                     }
                 }
-                if (n_mismatches <= primer_mismatches) {
-                    results[idata].found = true;
-                    results[idata].trim[0] = n_trim_r[0];
-                    results[idata].trim[1] = n_trim_r[1];
-                    pp.n_read_pairs += 1;
-                    unknown = false;
-                    break;
-                }
             }
-            // No match found, output untrimmed FQ
+            // No match found, no output for this read pair
             if (unknown) {
                 unknown_read_pairs++;
                 results[idata].found = false;
@@ -314,7 +321,7 @@ vector<PrimerPair> getPrimerPairs(const string& primer_file) {
             stringstream ss_line(line);
             string seq1, seq2, dummy, name;
             ss_line >> seq1; ss_line >> seq2; ss_line >> dummy; ss_line >> name;
-            result.emplace_back(PrimerPair(name, seq1, seq2));
+            result.emplace_back(name, seq1, seq2);
         }
     }
     return result;
@@ -335,7 +342,7 @@ int main(int argc, char* argv[]) {
               input_file_r1, input_file_r2,
               output_file_r[2];
     unsigned int primer_mismatches;
-    bool use_hamming;
+    bool use_hamming, use_swapped_primer_pairs;
 
     cerr << "\ntool " << VERSION << "\n" << endl;
 
@@ -343,8 +350,8 @@ int main(int argc, char* argv[]) {
     visible.add_options()
         ("primer-mismatches,b", po::value<unsigned int>(&primer_mismatches)->default_value(0),
             "Total allowed mismatches in primer1 + primer2.")
-        ("use-hamming,H", po::bool_switch(&use_hamming),
-            "Use Hamming distance instead of Levenshtein distance.")
+        ("swapped-primer-pairs,s", po::bool_switch(&use_swapped_primer_pairs),
+            "Also search for reverse primer in read 1 and forward primer in read 2 (non-polar amplicons).")
         ("help,h", "Show this help message.")
     ;
     po::options_description positionals("Positional options(hidden)");
@@ -422,20 +429,30 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
     }
+
+    // Add swapped pairs if requested
+    vector<PrimerPair*> original_primers;
+    vector<PrimerPair*> swapped_primers;
+
+    for (PrimerPair& pp : primers) original_primers.push_back(&pp);
+
+    if (use_swapped_primer_pairs) {
+        for (auto pp : original_primers) {
+                primers.emplace_back(pp->name, pp->primers[1], pp->primers[0]);
+                swapped_primers.push_back(&primers.back());
+            }
+    }
     
     // Print information on startup
     cerr.precision(1);
     cerr << fixed;
     cerr << "\nTrimming " << primers.size() << " primer pairs...\n\n";
-    cerr << " Allowed primer mismatches:  " << primer_mismatches << '\n';
-    cerr << " String distance:            ";
-    if (primer_mismatches == 0) cerr << "NoMismatch" << '\n';
-    else if (use_levens)        cerr << "Levenshtein" << '\n';
-    else                        cerr << "Hamming" << '\n';
-    cerr << " Input/output compression:   " << (compressed ? "gzip" : "off") << '\n';
+    cerr << " Include swapped primer pairs:  " << (use_swapped_primer_pairs ? "yes" : "no") << '\n';
+    cerr << " Allowed primer edit distance:  " << primer_mismatches << '\n';
+    cerr << " Input/output compression:      " << (compressed ? "gzip" : "off") << '\n';
     cerr << endl;
 
-    Analysis analysis(primers, use_levens, primer_mismatches);
+    Analysis analysis(primers, primer_mismatches);
     TrimmingManager manager(inputs, analysis, outputs);
     bool success = manager.run();
 
@@ -444,11 +461,15 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     else {
+        cerr << "\nTotal processed read pairs:    " << analysis.n_total_read_pairs << endl;
+        cerr <<   "Trimmed and output read pairs: " << (analysis.n_total_read_pairs-analysis.unknown_read_pairs) << endl;
+        cerr <<   "Percentage of reads:           " <<
+                (analysis.n_total_read_pairs-analysis.unknown_read_pairs) * 100.0 /  analysis.n_total_read_pairs << endl;
+
         bool delete_files = true;
-        for (int i=0; i<primers.size(); ++i) { // Deletes empty files, would be corrupted gzip files.
-            delete_files = delete_files && (primers[i].n_read_pairs == 0);
+        for (auto& pp : primers) { // Deletes empty files, would be corrupted gzip files.
+            delete_files = delete_files && (pp.n_read_pairs == 0);
         }
-        cerr << "\nCompleted trimming " << analysis.n_total_read_pairs << " read pairs.\n" << endl;
         if (delete_files) {
             cerr << "Removing empty output files.\n" << endl;
             for (int i=0; i<2; ++i) {
@@ -458,19 +479,36 @@ int main(int argc, char* argv[]) {
         }
         cerr << "\nTime (seconds): Input: " << manager.input_time / 1e6
              << ", Matching: " << manager.matching_time / 1e6
-             << ", Output: " << manager.output_time / 1e6 << endl;
-        cerr << "\nOutput: " << analysis.n_total_read_pairs - analysis.unknown_read_pairs << " read pairs.\n" << endl;
-        cout << "PRIMER_NAME\tNUM_READ_PAIRS\tPCT_READS\n";
-        for (PrimerPair& pp : primers) {
-            cout.precision(2);
-            cout << fixed;
-            cout << pp.name << '\t'
-                << pp.n_read_pairs << '\t'
-                << pp.n_read_pairs * 100.0 / max(analysis.n_total_read_pairs, 1ul) << '\t'
-                << '\n';
+             << ", Output: " << manager.output_time / 1e6 << endl << endl;
+        if (use_swapped_primer_pairs) {
+            cout << "PRIMER_NAME\tREAD_PAIRS_FW\tREAD_PAIRS_REV\tREAD_PAIRS_TOT\tPCT_READS\n";
+            for (int i=0; i<original_primers.size(); ++i) {
+                cout.precision(2);
+                cout << fixed;
+                int total = original_primers[i]->n_read_pairs + swapped_primers[i]->n_read_pairs;
+                cout << original_primers[i]->name << '\t'
+                    << original_primers[i]->n_read_pairs << '\t'
+                    << swapped_primers[i]->n_read_pairs << '\t'
+                    << total << '\t'
+                    << total * 100.0 / max(analysis.n_total_read_pairs, 1ul) << '\t'
+                    << '\n';
+            }
+            cout << "Unmatched\t-\t-\t" << analysis.unknown_read_pairs << '\t'
+                << analysis.unknown_read_pairs * 100.0 / analysis.n_total_read_pairs << "\n";
         }
-        cout << "Unmatched\t-\t-\t" << analysis.unknown_read_pairs << '\t'
-            << analysis.unknown_read_pairs * 100.0 / analysis.n_total_read_pairs << "\n";
+        else {
+            cout << "PRIMER_NAME\tREAD_PAIRS\tPCT_READS\n";
+            for (auto pp : primers) {
+                cout.precision(2);
+                cout << fixed;
+                cout << pp.name << '\t'
+                    << pp.n_read_pairs << '\t'
+                    << pp.n_read_pairs * 100.0 / max(analysis.n_total_read_pairs, 1ul) << '\t'
+                    << '\n';
+            }
+            cout << "Unmatched\t" << analysis.unknown_read_pairs << '\t'
+                << analysis.unknown_read_pairs * 100.0 / analysis.n_total_read_pairs << "\n";
+        }
     }
     return 0;
 }
