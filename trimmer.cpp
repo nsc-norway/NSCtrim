@@ -243,8 +243,9 @@ class Analysis {
                 results[idata].found = false;
             }
             if (++n_total_read_pairs % 1000000 == 0) {
-                cerr << "Processed " << n_total_read_pairs << " read pairs. Unmatched primers: "
-                     << (unknown_read_pairs * 100.0 / n_total_read_pairs) << " %."<< endl;
+                cerr << "Processed " << n_total_read_pairs << " read pairs. Matched primers: "
+                     << ((n_total_read_pairs-unknown_read_pairs) * 100.0 / n_total_read_pairs)
+                     << " %."<< endl;
             }
         }
         return results;
@@ -315,7 +316,7 @@ vector<PrimerPair> getPrimerPairs(const string& primer_file) {
     }
     vector<PrimerPair> result;
     string line;
-    while (ppfile) {
+    while (!ppfile.eof() && !ppfile.fail()) {
         getline(ppfile, line);
         if (!line.empty()) {
             stringstream ss_line(line);
@@ -401,8 +402,8 @@ int main(int argc, char* argv[]) {
 
     bool use_levens = !use_hamming;
 
-    vector<PrimerPair> primers = getPrimerPairs(primer_file);
-    if (primers.empty()) {
+    vector<PrimerPair> primer_pairs = getPrimerPairs(primer_file);
+    if (primer_pairs.empty()) {
         cerr << "Error: Barcode file is empty." << endl;
         return 1;
     }
@@ -430,29 +431,23 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Add swapped pairs if requested
-    vector<PrimerPair*> original_primers;
-    vector<PrimerPair*> swapped_primers;
-
-    for (PrimerPair& pp : primers) original_primers.push_back(&pp);
-
+    size_t n_unique_primers = primer_pairs.size();
     if (use_swapped_primer_pairs) {
-        for (auto pp : original_primers) {
-                primers.emplace_back(pp->name, pp->primers[1], pp->primers[0]);
-                swapped_primers.push_back(&primers.back());
-            }
+        for (int i=0; i<n_unique_primers; ++i) {
+            primer_pairs.emplace_back(primer_pairs[i].name, primer_pairs[i].primers[1], primer_pairs[i].primers[0]);
+        }
     }
     
     // Print information on startup
     cerr.precision(1);
     cerr << fixed;
-    cerr << "\nTrimming " << primers.size() << " primer pairs...\n\n";
+    cerr << "\nTrimming " << n_unique_primers << " primer pairs...\n\n";
     cerr << " Include swapped primer pairs:  " << (use_swapped_primer_pairs ? "yes" : "no") << '\n';
     cerr << " Allowed primer edit distance:  " << primer_mismatches << '\n';
     cerr << " Input/output compression:      " << (compressed ? "gzip" : "off") << '\n';
     cerr << endl;
 
-    Analysis analysis(primers, primer_mismatches);
+    Analysis analysis(primer_pairs, primer_mismatches);
     TrimmingManager manager(inputs, analysis, outputs);
     bool success = manager.run();
 
@@ -467,7 +462,7 @@ int main(int argc, char* argv[]) {
                 (analysis.n_total_read_pairs-analysis.unknown_read_pairs) * 100.0 /  analysis.n_total_read_pairs << endl;
 
         bool delete_files = true;
-        for (auto& pp : primers) { // Deletes empty files, would be corrupted gzip files.
+        for (auto& pp : primer_pairs) { // Deletes empty files, would be corrupted gzip files.
             delete_files = delete_files && (pp.n_read_pairs == 0);
         }
         if (delete_files) {
@@ -481,14 +476,14 @@ int main(int argc, char* argv[]) {
              << ", Matching: " << manager.matching_time / 1e6
              << ", Output: " << manager.output_time / 1e6 << endl << endl;
         if (use_swapped_primer_pairs) {
-            cout << "PRIMER_NAME\tREAD_PAIRS_FW\tREAD_PAIRS_REV\tREAD_PAIRS_TOT\tPCT_READS\n";
-            for (int i=0; i<original_primers.size(); ++i) {
+            cout << "PRIMER_NAME\tREAD_PAIRS_ORI\tREAD_PAIRS_SWP\tREAD_PAIRS_TOT\tPCT_READS\n";
+            for (int i=0; i<n_unique_primers; ++i) {
                 cout.precision(2);
                 cout << fixed;
-                int total = original_primers[i]->n_read_pairs + swapped_primers[i]->n_read_pairs;
-                cout << original_primers[i]->name << '\t'
-                    << original_primers[i]->n_read_pairs << '\t'
-                    << swapped_primers[i]->n_read_pairs << '\t'
+                int total = primer_pairs[i].n_read_pairs + primer_pairs[i+n_unique_primers].n_read_pairs;
+                cout << primer_pairs[i].name << '\t'
+                    << primer_pairs[i].n_read_pairs << '\t'
+                    << primer_pairs[i+n_unique_primers].n_read_pairs << '\t'
                     << total << '\t'
                     << total * 100.0 / max(analysis.n_total_read_pairs, 1ul) << '\t'
                     << '\n';
@@ -498,7 +493,7 @@ int main(int argc, char* argv[]) {
         }
         else {
             cout << "PRIMER_NAME\tREAD_PAIRS\tPCT_READS\n";
-            for (auto pp : primers) {
+            for (auto pp : primer_pairs) {
                 cout.precision(2);
                 cout << fixed;
                 cout << pp.name << '\t'
