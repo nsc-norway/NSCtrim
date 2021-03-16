@@ -441,13 +441,14 @@ int main(int argc, char* argv[]) {
     else {
         bool delete_files = true;
         for (int i=0; i<primers.size(); ++i) { // Deletes empty files, would be corrupted gzip files.
-            delete_files = delete_files && primers[i].n_read_pairs == 0;
+            delete_files = delete_files && (primers[i].n_read_pairs == 0);
         }
+        cerr << "\nCompleted trimming " << analysis.n_total_read_pairs << " read pairs.\n" << endl;
         if (delete_files) {
+            cerr << "Removing empty output files.\n" << endl;
             unlink(outputs[0].path.c_str());
             unlink(outputs[1].path.c_str());
         }
-        cerr << "\nCompleted trimming " << analysis.n_total_read_pairs << " read pairs.\n" << endl;
         cerr << "\nTime (seconds): Input: " << manager.input_time / 1e6
              << ", Matching: " << manager.matching_time / 1e6
              << ", Output: " << manager.output_time / 1e6 << endl;
