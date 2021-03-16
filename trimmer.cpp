@@ -128,6 +128,11 @@ class FastqOutput {
         }
     }
 
+    void close() {
+        // Explicitly close the file. It is an error to call writeBuffers() after close().
+        out_stream.reset();
+    }
+
     void writeBuffers(vector<OutputJob>& outputs) {
         for(OutputJob & output : outputs) {
             (*out_stream) << output.data[0] << '\n';
@@ -446,8 +451,10 @@ int main(int argc, char* argv[]) {
         cerr << "\nCompleted trimming " << analysis.n_total_read_pairs << " read pairs.\n" << endl;
         if (delete_files) {
             cerr << "Removing empty output files.\n" << endl;
-            unlink(outputs[0].path.c_str());
-            unlink(outputs[1].path.c_str());
+            for (int i=0; i<2; ++i) {
+                outputs[i].close();
+                unlink(output_file_r[i].c_str());
+            }
         }
         cerr << "\nTime (seconds): Input: " << manager.input_time / 1e6
              << ", Matching: " << manager.matching_time / 1e6
