@@ -320,8 +320,8 @@ vector<PrimerPair> getPrimerPairs(const string& primer_file) {
         getline(ppfile, line);
         if (!line.empty()) {
             stringstream ss_line(line);
-            string seq1, seq2, dummy, name;
-            ss_line >> seq1; ss_line >> seq2; ss_line >> dummy; ss_line >> name;
+            string seq1, seq2, name;
+            ss_line >> seq1; ss_line >> seq2; ss_line >> name;
             result.emplace_back(name, seq1, seq2);
         }
     }
