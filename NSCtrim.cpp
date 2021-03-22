@@ -345,7 +345,7 @@ int main(int argc, char* argv[]) {
     unsigned int primer_mismatches;
     bool use_hamming, use_swapped_primer_pairs;
 
-    cerr << "\ntool " << VERSION << "\n" << endl;
+    cerr << "\nNSCtrim " << VERSION << "\n" << endl;
 
     po::options_description visible("Allowed options");
     visible.add_options()
