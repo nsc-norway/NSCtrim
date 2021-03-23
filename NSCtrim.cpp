@@ -320,8 +320,22 @@ vector<PrimerPair> getPrimerPairs(const string& primer_file) {
         getline(ppfile, line);
         if (!line.empty()) {
             stringstream ss_line(line);
-            string seq1, seq2, name;
-            ss_line >> seq1; ss_line >> seq2; ss_line >> name;
+            string seq1, seq2, name, dummy;
+
+            // Reading the 11 columns of the primer file (Master file)
+            ss_line >> dummy;   //  1. Reference name
+            ss_line >> dummy;   //  2. amp start
+            ss_line >> dummy;   //  3. amp end
+            ss_line >> name;    //  4. amp name
+            ss_line >> dummy;   //  5. primer 1 start
+            ss_line >> dummy;   //  6. primer 1 end
+            ss_line >> dummy;   //  7. primer 1 name
+            ss_line >> dummy;   //  8. primer 2 start
+            ss_line >> dummy;   //  9. primer 2 end
+            ss_line >> dummy;   // 10. primer 2 name
+            ss_line >> seq1;    // 11. primer 1 seq
+            ss_line >> seq2;    // 12. primer 2 seq
+            
             result.emplace_back(name, seq1, seq2);
         }
     }
