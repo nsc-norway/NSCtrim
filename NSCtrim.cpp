@@ -223,7 +223,7 @@ class Analysis {
                         for (PrimerPair* pp : read1primer_primers) {
                             auto result2 = mismatch_and_alignment(primer_mismatches + 1,
                                                         pp->primers[1], bat[1].data[idata][1]);
-                            if (result1.first + result2.first <= primer_mismatches) {
+                            if (result2.first <= primer_mismatches) {
                                 unknown = false;
                                 results[idata].found = true;
                                 results[idata].trim[0] = result1.second;
@@ -363,8 +363,8 @@ int main(int argc, char* argv[]) {
 
     po::options_description visible("Allowed options");
     visible.add_options()
-        ("primer-mismatches,b", po::value<unsigned int>(&primer_mismatches)->default_value(0),
-            "Total allowed mismatches in primer1 + primer2.")
+        ("mismatches-per-primer,m", po::value<unsigned int>(&primer_mismatches)->default_value(0),
+            "Maximum allowed mismatches in primer1 and primer2 (per primer).")
         ("swapped-primer-pairs,s", po::bool_switch(&use_swapped_primer_pairs),
             "Also search for reverse primer in read 1 and forward primer in read 2 (non-polar amplicons).")
         ("help,h", "Show this help message.")
