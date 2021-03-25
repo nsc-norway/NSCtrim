@@ -1,2 +1,2 @@
-## trimming tool
+## NSCtrim -- primer trimming tool
 

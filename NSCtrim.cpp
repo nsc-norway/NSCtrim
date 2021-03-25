@@ -1,9 +1,6 @@
 #include <iostream>
-#include <algorithm>
 #include <vector>
 #include <array>
-#include <queue>
-#include <memory>
 #include <chrono>
 #include <sstream>
 #include <fstream>
@@ -13,9 +10,6 @@
 #include <boost/program_options.hpp>
 
 const size_t BATCH_SIZE = 8192; // reads to input, analyse
-const size_t QUEUE_MAX = 16;        // number of batches in input queue
-const size_t QUEUE_HIGH_LEVEL = 12; // max number of batch before running input
-const size_t OUTPUT_QUEUE_SUM = 65535; // max read in ouput queues
 const std::streamsize GZIP_INPUT_BUFFER_SIZE = 16*1024;
 const std::streamsize GZIP_OUTPUT_BUFFER_SIZE = 4*1024;
 
