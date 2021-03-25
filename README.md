@@ -126,10 +126,14 @@ Statically compiled executables for Linux are available on the release pages in 
 ### Docker
 
 You can build the program from source inside docker, creating a docker image with the NSCtrim tool.
-
 Clone this git repository, and then run `docker-build.sh`. The docker image `nsctrim:VERSION` will be created locally.
-
 The command `NSCtrim` is available on the path inside the docker image.
+
+You can even create a docker image more directly using the github URL. You have to give it the version manually, for the purpose of printing the version in the tool's output (suggestions for how to fix it are welcome). Specify any tag to build -- 1.3.1 in the example:
+
+```
+docker build -t nsctrim:1.3.1 https://github.com/nsc-norway/NSCtrim.git#1.3.1:. --build-arg VERSION=1.3.1
+```
 
 ### Compile from source
 
