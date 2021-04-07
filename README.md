@@ -97,7 +97,8 @@ You would get this in the data:
 | D123   | C123 |
 
 The sequences are not reverse-complemented in any of these cases (apart from the fact that
-B123 and D123 should already be the reverse-complement, as described above).
+B123 and D123 should already be the reverse-complement of the amplified template DNA, as
+described above).
 
 
 ### Output
