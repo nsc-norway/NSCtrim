@@ -316,19 +316,10 @@ vector<PrimerPair> getPrimerPairs(const string& primer_file) {
             stringstream ss_line(line);
             string seq1, seq2, name, dummy;
 
-            // Reading the 11 columns of the primer file (Master file)
-            ss_line >> dummy;   //  1. Reference name
-            ss_line >> dummy;   //  2. amp start
-            ss_line >> dummy;   //  3. amp end
-            ss_line >> name;    //  4. amp name
-            ss_line >> dummy;   //  5. primer 1 start
-            ss_line >> dummy;   //  6. primer 1 end
-            ss_line >> dummy;   //  7. primer 1 name
-            ss_line >> dummy;   //  8. primer 2 start
-            ss_line >> dummy;   //  9. primer 2 end
-            ss_line >> dummy;   // 10. primer 2 name
-            ss_line >> seq1;    // 11. primer 1 seq
-            ss_line >> seq2;    // 12. primer 2 seq
+            // Reading the 3 columns of the primer file
+            ss_line >> seq1;   //  1. primer 1 seq
+            ss_line >> seq2;   //  2. primer 2 seq
+            ss_line >> name;   //  3. amp name
             
             result.emplace_back(name, seq1, seq2);
         }
@@ -366,7 +357,7 @@ int main(int argc, char* argv[]) {
     po::options_description positionals("Positional options(hidden)");
     positionals.add_options()
         ("PRIMER_FILE", po::value<string>(&primer_file)->required(),
-            "Primer pair file")
+            "File with primer sequences and names (see README)")
         ("INPUT_FILE_R1", po::value<string>(&input_file_r1)->required(),
             "Input file read 1")
         ("INPUT_FILE_R2", po::value<string>(&input_file_r2)->required(),

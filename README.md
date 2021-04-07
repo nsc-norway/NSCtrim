@@ -40,31 +40,22 @@ Example:
 
 ### Primer file
 
-The primer file should be an 12-column tab separated file without a header. Only the fourth,
-11th and 12th columns are used -- anything else is ignored. It's designed to match the 
-"Master file" format used by Swift Biosciences.
+The primer file should be an 3-column tab separated file without a header. 
 
 | Column | Value        |
 |--------|--------------|
-| 4      | Name of primer combination. Used in the output table only. |
-| 11     | Read 1 primer sequence. |
-| 12     | Read 2 primer sequence. |
+| 1     | Read 1 primer sequence. |
+| 2     | Read 2 primer sequence. |
+| 3     | Name of primer combination. Used in the output table only. |
 
-Example 1 (Swift):
-
-```
-NC_045512.2     25      301     covid19genome_0-200_s0_M1       3       25      covid19genome_0-200_s0_M1F      301      322     covid19genome_200-29703_s7490_U_88R     AAAGGTTTATACCCTTCCCAGG  AGGCAAACTGAGTTGGACGTG
-NC_045512.2     52      301     covid19genome_0-200_s0_M2       29      52      covid19genome_0-200_s0_M2F      301      322     covid19genome_200-29703_s7490_U_88R     AACCAACTTTCGATCTCTTGTAG AGGCAAACTGAGTTGGACGTG
-```
-
-Example 2 (simple):
+Example:
 
 ```
-_	_	_	covid19genome_0-200_s0_M1	_	_	_	_	_	_	AAAGGTTTATACCCTTCCCAGG	AGGCAAACTGAGTTGGACGTG
-_	_	_	covid19genome_0-200_s0_M2	_	_	_	_	_	_	AACCAACTTTCGATCTCTTGTAG	AGGCAAACTGAGTTGGACGTG
+AAAGGTTTATACCCTTCCCAGG  AGGCAAACTGAGTTGGACGTG amp001
+AACCAACTTTCGATCTCTTGTAG AGGCAAACTGAGTTGGACGTG amp002
 ```
 
-The 12th column (Read 2 primer sequence) should contain the actual sequence to search for in
+The second column (Read 2 primer sequence) should contain the actual sequence to search for in
 the reads, which is the reverse complement of the DNA sequence to amplify.
 
 
