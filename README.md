@@ -58,6 +58,20 @@ AACCAACTTTCGATCTCTTGTAG AGGCAAACTGAGTTGGACGTG amp002
 The second column (Read 2 primer sequence) should contain the actual sequence to search for in
 the reads, which is the reverse complement of the DNA sequence to amplify.
 
+**Important warning for short amplicons:** 
+
+If the length of any of the amplicons is less than the length of the sequence reads, extra caution
+is required. For example, if read 1 and read 2 are both 151 bases long, then there will be an issue
+if the sum of the length of one of the primers and its amplified region is less than 151 bases.
+Both read 1 and read 2 will then start with a primer sequence, then contain the full
+amplified region, and then also contain the other primer at the end of the read -- either in full or
+parts of it. NSCtrim makes no attempt to trim primers that are not at the beginning of the reads.
+
+The recommended way to deal with short amplicons is to clean the data with `fastp` 
+( https://github.com/OpenGene/fastp ) AFTER running NSCtrim. fastp removes adapter sequences based
+on overlap between read 1 and read 2. If the output of NSCtrim is processed with fastp, it will
+treat the primer sequences at the end of the reads as adapters, and remove them.
+
 
 ### Bridging amplicons
 
