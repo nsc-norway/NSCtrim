@@ -484,8 +484,7 @@ int main(int argc, char* argv[]) {
                     << primer_pairs[i].n_read_pairs << '\t'
                     << primer_pairs[i+n_unique_primers].n_read_pairs << '\t'
                     << total << '\t'
-                    << total * 100.0 / max(analysis.n_total_read_pairs, 1ul) << '\t'
-                    << '\n';
+                    << total * 100.0 / max(analysis.n_total_read_pairs, 1ul) << '\n';
             }
             cout << "Unmatched\t-\t-\t" << analysis.unknown_read_pairs << '\t'
                 << analysis.unknown_read_pairs * 100.0 / analysis.n_total_read_pairs << "\n";
@@ -497,8 +496,7 @@ int main(int argc, char* argv[]) {
                 cout << fixed;
                 cout << pp.name << '\t'
                     << pp.n_read_pairs << '\t'
-                    << pp.n_read_pairs * 100.0 / max(analysis.n_total_read_pairs, 1ul) << '\t'
-                    << '\n';
+                    << pp.n_read_pairs * 100.0 / max(analysis.n_total_read_pairs, 1ul) << '\n';
             }
             cout << "Unmatched\t" << analysis.unknown_read_pairs << '\t'
                 << analysis.unknown_read_pairs * 100.0 / analysis.n_total_read_pairs << "\n";
