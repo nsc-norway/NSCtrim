@@ -131,6 +131,12 @@ Statically compiled executables for Linux are available on the release pages in 
 
 ### Docker
 
+The docker images for the current development branch (main) and future releases are available at:
+```
+ghcr.io/fa2k/ncstrim
+```
+Use the (default) tag `latest` to get the current development version. 
+
 You can build the program from source inside docker, creating a docker image with the NSCtrim tool.
 Clone this git repository, and then run `make docker`. The docker image `nsctrim:VERSION` will be created locally.
 The version number is determined from the currently checked out git tag, but you can override this version by
