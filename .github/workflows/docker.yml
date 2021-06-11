@@ -19,6 +19,7 @@ jobs:
             TAGS="$TAGS,${DOCKER_IMAGE}:latest"
           fi
           echo ::set-output name=tags::${TAGS}
+          echo ::set-output name=version::${VERSION}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to GitHub Packages Docker Registry
@@ -33,4 +34,5 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          build-args: VERSION=${{ steps.prep.outputs.version }}
           tags: ${{ steps.prep.outputs.tags }}
