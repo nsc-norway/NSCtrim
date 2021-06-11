@@ -18,4 +18,5 @@ COPY Makefile .
 RUN make NSCtrim.static
 
 FROM alpine:3.13.5 AS RUNNER
+RUN apk add bash 
 COPY --from=BUILDER /trimmer/NSCtrim.static /usr/bin/NSCtrim
