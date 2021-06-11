@@ -7,7 +7,8 @@ RUN apt-get update && \
     build-essential=12.8ubuntu1 \
     libboost-iostreams-dev=1.71.0.0ubuntu2 \
     libboost-program-options-dev=1.71.0.0ubuntu2 \
-    zlib1g-dev=1:1.2.11.dfsg-2ubuntu1.2
+    zlib1g-dev=1:1.2.11.dfsg-2ubuntu1.2 \
+    git=1:2.25.1-1ubuntu3.1
 ARG VERSION
 RUN mkdir /trimmer
 WORKDIR /trimmer
