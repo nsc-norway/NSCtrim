@@ -181,7 +181,7 @@ Set environment variable:
     CFLAGS="-I/usr/local/include -L/usr/local/lib"
 
 
-Run `make` to make a dynamically linked executable.
+**After installing dependencies (any platform)**: Run `make` to make a dynamically linked executable.
 
 Run `make NSCtrim.static` to make a statically linked executable. This can be used on Linux computers that don't have Boost installed. (you can rename the file to `NSCtrim`)
 
