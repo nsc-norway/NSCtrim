@@ -1,3 +1,40 @@
+using namespace std;
+
+
+class DegenerateMatch {
+    public:
+    static bool match(char templ, char test) {
+        switch (templ) {
+            case 'A': return test == 'A';
+            case 'C': return test == 'C';
+            case 'G': return test == 'G';
+            case 'T': return test == 'T';
+            case 'U': return test == 'U';
+            case 'W': return test == 'A' || test == 'T';
+            case 'S': return test == 'C' || test == 'G';
+            case 'M': return test == 'A' || test == 'C';
+            case 'K': return test == 'G' || test == 'T';
+            case 'R': return test == 'A' || test == 'G';
+            case 'Y': return test == 'C' || test == 'T';
+            case 'B': return test == 'C' || test == 'G' || test == 'T';
+            case 'D': return test == 'A' || test == 'C' || test == 'T';
+            case 'V': return test == 'A' || test == 'C' || test == 'G';
+            case 'N': return true;
+            default:
+                return false;
+        }
+    }
+};
+
+class ExactMatch {
+    public:
+    static bool match(char templ, char test) {
+        return templ == test;
+    }
+};
+
+
+
 /** 
  * mismatch_and_alignment
  *
@@ -35,6 +72,7 @@
  *
  */
 
+template <typename NucleotideMatch>
 pair<int,int> mismatch_and_alignment(int max_val, const string& s1, const string& s2)
 {
     size_t s1len = s1.length();
@@ -93,7 +131,7 @@ pair<int,int> mismatch_and_alignment(int max_val, const string& s1, const string
             auto possibilities = {
                 prevcol[1 + i] + 1,
                 column[i] + 1,
-                prevcol[i] + (s1[j] == s2[i] ? 0 : 1)
+                prevcol[i] + (NucleotideMatch::match(s1[j], s2[i]) ? 0 : 1)
             };
             int best_possibility = std::min(possibilities);
             column[i+1] = best_possibility;
@@ -108,7 +146,7 @@ pair<int,int> mismatch_and_alignment(int max_val, const string& s1, const string
         if (i == last + 1 && i < s2len) {
             auto possibilities = {
                 column[i] + 1,
-                prevcol[i] + (s1[j] == s2[i] ? 0 : 1)
+                prevcol[i] + (NucleotideMatch::match(s1[j], s2[i]) ? 0 : 1)
             };
             int best_possibility = std::min(possibilities);
             column[i + 1] = best_possibility;

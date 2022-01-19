@@ -29,6 +29,8 @@ Allowed options:
   -s [ --swapped-primer-pairs ]         Also search for reverse primer in read 
                                         1 and forward primer in read 2 
                                         (non-polar amplicons).
+  -d [ --degenerate-primers ]           Primers are specified as IUPAC 
+                                        degenerate nucleotide codes.
   -h [ --help ]                         Show this help message.
 
 ```
@@ -162,12 +164,21 @@ Requirements:
     * `program-options`
 * zlib (`libz`)
 
-As an example, you can install the following packages with `apt` on Ubuntu 20.04 to install the requirements:
+As an example, you can install the following packages with `apt` on **Ubuntu 20.04** to install the requirements:
 
 * `build-essential`
 * `libboost-iostreams-dev`
 * `libboost-program-options-dev`
 * `libz-dev`
+
+On **FreeBSD 12**: Install with `pkg install`:
+
+* `devel/boost-all`
+* `lang/gcc`
+
+Set environment variable:
+
+    CFLAGS="-I/usr/local/include -L/usr/local/lib"
 
 
 Run `make` to make a dynamically linked executable.
@@ -177,3 +188,4 @@ Run `make NSCtrim.static` to make a statically linked executable. This can be us
 The version string is taken automatically from the currently committed git tag. To define your own version, commit the changes (locally) and create a tag with `git tag`.
 
 There is no installation, but you can copy the file to `/usr/bin` to be able to run it on the command line.
+

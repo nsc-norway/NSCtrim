@@ -164,6 +164,7 @@ class Analysis {
     vector<vector<PrimerPair*>> read1_primer_read2_primers;
 
     unsigned int primer_mismatches;
+    bool use_degenerate_primers;
 
     public:
 
@@ -171,8 +172,10 @@ class Analysis {
     unsigned long n_total_read_pairs = 0;
 
 
-    Analysis(vector<PrimerPair>& primer_pairs, unsigned int primer_mismatches) :
-        primer_pairs(primer_pairs), primer_mismatches(primer_mismatches)
+    Analysis(vector<PrimerPair>& primer_pairs, unsigned int primer_mismatches,
+                bool use_degenerate_primers) :
+        primer_pairs(primer_pairs), primer_mismatches(primer_mismatches),
+        use_degenerate_primers(use_degenerate_primers)
     {
         map<string, vector<PrimerPair*>> read1_primer_map;
         for (auto& pp : primer_pairs) {
@@ -210,13 +213,24 @@ class Analysis {
                     }
                 }
                 else {
-                    auto result1 = mismatch_and_alignment(primer_mismatches + 1,
-                            read1primer_primers[0]->primers[0],
-                            bat[0].data[idata][1]);
+                    pair<int,int> result1;
+                    if (use_degenerate_primers)
+                        result1 = mismatch_and_alignment<DegenerateMatch>(primer_mismatches + 1,
+                                read1primer_primers[0]->primers[0],
+                                bat[0].data[idata][1]);
+                    else
+                        result1 = mismatch_and_alignment<ExactMatch>(primer_mismatches + 1,
+                                read1primer_primers[0]->primers[0],
+                                bat[0].data[idata][1]);
                     if (result1.first <= primer_mismatches) {
                         for (PrimerPair* pp : read1primer_primers) {
-                            auto result2 = mismatch_and_alignment(primer_mismatches + 1,
-                                                        pp->primers[1], bat[1].data[idata][1]);
+                            pair<int,int> result2;
+                            if (use_degenerate_primers)
+                                result2 = mismatch_and_alignment<DegenerateMatch>(primer_mismatches + 1,
+                                                            pp->primers[1], bat[1].data[idata][1]);
+                            else
+                                result2 = mismatch_and_alignment<ExactMatch>(primer_mismatches + 1,
+                                                            pp->primers[1], bat[1].data[idata][1]);
                             if (result2.first <= primer_mismatches) {
                                 unknown = false;
                                 results[idata].found = true;
@@ -302,7 +316,7 @@ class TrimmingManager {
     }
 };
 
-vector<PrimerPair> getPrimerPairs(const string& primer_file) {
+vector<PrimerPair> getPrimerPairs(const string& primer_file, bool use_degenerate_primers) {
     ifstream ppfile(primer_file);
     if (!ppfile) {
         cerr << "Error: Unable to open primer file " << primer_file << endl;
@@ -310,6 +324,7 @@ vector<PrimerPair> getPrimerPairs(const string& primer_file) {
     }
     vector<PrimerPair> result;
     string line;
+    bool have_warned = false;
     while (!ppfile.eof() && !ppfile.fail()) {
         getline(ppfile, line);
         if (!line.empty()) {
@@ -320,7 +335,23 @@ vector<PrimerPair> getPrimerPairs(const string& primer_file) {
             ss_line >> seq1;   //  1. primer 1 seq
             ss_line >> seq2;   //  2. primer 2 seq
             ss_line >> name;   //  3. amp name
-            
+
+            if (!have_warned) {
+                string allowed_chars;
+                if (use_degenerate_primers) {
+                    allowed_chars = "ACGTUWSMKRYBDVN";
+                }
+                else {
+                    allowed_chars = "ACTGU";
+                }
+                if (    seq1.find_first_not_of(allowed_chars) != string::npos ||
+                        seq2.find_first_not_of(allowed_chars) != string::npos) {
+                    cerr << "Warning: Primer pair " << name << " (and possibly others) has"<< endl;
+                    cerr << "         other characters than " << allowed_chars << ", which" << endl;
+                    cerr << "         will never match the input sequence." << endl;
+                    have_warned = true;
+                }
+            }
             result.emplace_back(name, seq1, seq2);
         }
     }
@@ -342,7 +373,7 @@ int main(int argc, char* argv[]) {
               input_file_r1, input_file_r2,
               output_file_r[2];
     unsigned int primer_mismatches;
-    bool use_hamming, use_swapped_primer_pairs;
+    bool use_hamming, use_swapped_primer_pairs, use_degenerate_primers;
 
     cerr << "\nNSCtrim " << VERSION << "\n" << endl;
 
@@ -352,6 +383,8 @@ int main(int argc, char* argv[]) {
             "Maximum allowed mismatches in primer1 and primer2 (per primer).")
         ("swapped-primer-pairs,s", po::bool_switch(&use_swapped_primer_pairs),
             "Also search for reverse primer in read 1 and forward primer in read 2 (non-polar amplicons).")
+        ("degenerate-primers,d", po::bool_switch(&use_degenerate_primers),
+            "Primers are specified as IUPAC degenerate nucleotide codes.")
         ("help,h", "Show this help message.")
     ;
     po::options_description positionals("Positional options(hidden)");
@@ -401,7 +434,7 @@ int main(int argc, char* argv[]) {
 
     bool use_levens = !use_hamming;
 
-    vector<PrimerPair> primer_pairs = getPrimerPairs(primer_file);
+    vector<PrimerPair> primer_pairs = getPrimerPairs(primer_file, use_degenerate_primers);
     if (primer_pairs.empty()) {
         cerr << "Error: Barcode file is empty." << endl;
         return 1;
@@ -446,7 +479,7 @@ int main(int argc, char* argv[]) {
     cerr << " Input/output compression:      " << (compressed ? "gzip" : "off") << '\n';
     cerr << endl;
 
-    Analysis analysis(primer_pairs, primer_mismatches);
+    Analysis analysis(primer_pairs, primer_mismatches, use_degenerate_primers);
     TrimmingManager manager(inputs, analysis, outputs);
     bool success = manager.run();
 
