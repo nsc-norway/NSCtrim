@@ -20,17 +20,20 @@ mismatches allowed (`-m`) is greater than zero.
  ./NSCtrim [options] \
      PRIMER_FILE \
      INPUT_FILE_R1 INPUT_FILE_R2 \
-     OUTPUT_FILE_R1 OUTPUT_FILE_R2 
+     OUTPUT_FILE_R1 OUTPUT_FILE_R2
 
 Allowed options:
   -m [ --mismatches-per-primer ] arg (=0)
-                                        Maximum allowed mismatches in primer1 
+                                        Maximum allowed mismatches in primer1
                                         and primer2 (per primer).
-  -s [ --swapped-primer-pairs ]         Also search for reverse primer in read 
-                                        1 and forward primer in read 2 
+  -s [ --swapped-primer-pairs ]         Also search for reverse primer in read
+                                        1 and forward primer in read 2
                                         (non-polar amplicons).
-  -d [ --degenerate-primers ]           Primers are specified as IUPAC 
+  -d [ --degenerate-primers ]           Primers are specified as IUPAC
                                         degenerate nucleotide codes.
+  -U [ --write-unmatched ]              Inverted output condition - write reads
+                                        that don't match, untrimmed (for
+                                        troubleshooting).
   -h [ --help ]                         Show this help message.
 
 ```

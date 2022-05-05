@@ -266,14 +266,17 @@ class TrimmingManager {
     std::array<FastqInput, 2>& inputs;
     Analysis & analysis;
     std::array<FastqOutput, 2>& outputs;
+    bool write_untrimmed_unmatched;
 
     public:
     // Run times
     double input_time=0, matching_time=0, output_time=0;
     TrimmingManager(    std::array<FastqInput, 2>& inputs,
                         Analysis& analysis,
-                        std::array<FastqOutput, 2>& outputs) 
-        : inputs(inputs), analysis(analysis), outputs(outputs)
+                        std::array<FastqOutput, 2>& outputs,
+                        bool write_untrimmed_unmatched) 
+        : inputs(inputs), analysis(analysis), outputs(outputs),
+          write_untrimmed_unmatched(write_untrimmed_unmatched)
     {
     }
 
@@ -297,7 +300,10 @@ class TrimmingManager {
             for (int read=0; read<2; ++read) {
                 vector<OutputJob> output_jobs;
                 for (int i=0; i<results.size(); ++i) {
-                    if (results[i].found) {
+                    if (write_untrimmed_unmatched && !results[i].found) {
+                        output_jobs.emplace_back(0, bat[read].data[i]);
+                    }
+                    else if (results[i].found) {
                         output_jobs.emplace_back(results[i].trim[read], bat[read].data[i]);
                     }
                 }
@@ -374,6 +380,7 @@ int main(int argc, char* argv[]) {
               output_file_r[2];
     unsigned int primer_mismatches;
     bool use_hamming, use_swapped_primer_pairs, use_degenerate_primers;
+    bool write_untrimmed_unmatched;
 
     cerr << "\nNSCtrim " << VERSION << "\n" << endl;
 
@@ -385,6 +392,8 @@ int main(int argc, char* argv[]) {
             "Also search for reverse primer in read 1 and forward primer in read 2 (non-polar amplicons).")
         ("degenerate-primers,d", po::bool_switch(&use_degenerate_primers),
             "Primers are specified as IUPAC degenerate nucleotide codes.")
+        ("write-unmatched,U", po::bool_switch(&write_untrimmed_unmatched),
+            "Inverted output condition - write reads that don't match, untrimmed (for troubleshooting).")
         ("help,h", "Show this help message.")
     ;
     po::options_description positionals("Positional options(hidden)");
@@ -477,10 +486,11 @@ int main(int argc, char* argv[]) {
     cerr << " Include swapped primer pairs:  " << (use_swapped_primer_pairs ? "yes" : "no") << '\n';
     cerr << " Allowed primer edit distance:  " << primer_mismatches << '\n';
     cerr << " Input/output compression:      " << (compressed ? "gzip" : "off") << '\n';
+    cerr << " Write unmatched reads only:    " << (write_untrimmed_unmatched ? "on" : "off") << '\n';
     cerr << endl;
 
     Analysis analysis(primer_pairs, primer_mismatches, use_degenerate_primers);
-    TrimmingManager manager(inputs, analysis, outputs);
+    TrimmingManager manager(inputs, analysis, outputs, write_untrimmed_unmatched);
     bool success = manager.run();
 
     if (!success) { // The Manager will print an error message
